@@ -1,0 +1,1263 @@
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 16.0
+-- Dumped by pg_dump version 16.0
+
+-- Started on 2024-06-21 21:58:30
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- TOC entry 239 (class 1255 OID 33304)
+-- Name: check_stock_before_lend(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.check_stock_before_lend() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    -- Check if the book is in stock
+    IF (SELECT in_stock FROM library_stock WHERE stock_id = NEW.stock_id) <= 0 THEN
+        RAISE EXCEPTION 'Cannot lend a book that is out of stock';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.check_stock_before_lend() OWNER TO postgres;
+
+--
+-- TOC entry 235 (class 1255 OID 33298)
+-- Name: decrement_stock(integer); Type: PROCEDURE; Schema: public; Owner: postgres
+--
+
+CREATE PROCEDURE public.decrement_stock(IN p_stock_id integer)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE library_stock
+    SET in_stock = in_stock - 1
+    WHERE stock_id = p_stock_id;
+END;
+$$;
+
+
+ALTER PROCEDURE public.decrement_stock(IN p_stock_id integer) OWNER TO postgres;
+
+--
+-- TOC entry 236 (class 1255 OID 33299)
+-- Name: increment_stock(integer); Type: PROCEDURE; Schema: public; Owner: postgres
+--
+
+CREATE PROCEDURE public.increment_stock(IN p_stock_id integer)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE library_stock
+    SET in_stock = in_stock + 1
+    WHERE stock_id = p_stock_id;
+END;
+$$;
+
+
+ALTER PROCEDURE public.increment_stock(IN p_stock_id integer) OWNER TO postgres;
+
+--
+-- TOC entry 237 (class 1255 OID 33300)
+-- Name: trigger_decrement_stock(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.trigger_decrement_stock() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    CALL decrement_stock(NEW.stock_id);
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.trigger_decrement_stock() OWNER TO postgres;
+
+--
+-- TOC entry 238 (class 1255 OID 33301)
+-- Name: trigger_increment_stock(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.trigger_increment_stock() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    CALL increment_stock(OLD.stock_id);
+    RETURN OLD;
+END;
+$$;
+
+
+ALTER FUNCTION public.trigger_increment_stock() OWNER TO postgres;
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- TOC entry 218 (class 1259 OID 33079)
+-- Name: author; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.author (
+    author_id bigint NOT NULL,
+    aname character varying(50) NOT NULL,
+    asurname character varying(50) NOT NULL
+);
+
+
+ALTER TABLE public.author OWNER TO postgres;
+
+--
+-- TOC entry 217 (class 1259 OID 33078)
+-- Name: author_author_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.author_author_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.author_author_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 4969 (class 0 OID 0)
+-- Dependencies: 217
+-- Name: author_author_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.author_author_id_seq OWNED BY public.author.author_id;
+
+
+--
+-- TOC entry 222 (class 1259 OID 33097)
+-- Name: book; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.book (
+    book_id bigint NOT NULL,
+    title character varying(50) NOT NULL,
+    author_id integer,
+    genre_id integer,
+    pub_id integer
+);
+
+
+ALTER TABLE public.book OWNER TO postgres;
+
+--
+-- TOC entry 221 (class 1259 OID 33096)
+-- Name: book_book_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.book_book_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.book_book_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 4970 (class 0 OID 0)
+-- Dependencies: 221
+-- Name: book_book_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.book_book_id_seq OWNED BY public.book.book_id;
+
+
+--
+-- TOC entry 224 (class 1259 OID 33119)
+-- Name: book_desc; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.book_desc (
+    desc_id bigint NOT NULL,
+    book_id integer,
+    series character varying(50),
+    n_in_series smallint,
+    m_n_in_series smallint,
+    description character varying(300)
+);
+
+
+ALTER TABLE public.book_desc OWNER TO postgres;
+
+--
+-- TOC entry 223 (class 1259 OID 33118)
+-- Name: book_desc_desc_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.book_desc_desc_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.book_desc_desc_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 4971 (class 0 OID 0)
+-- Dependencies: 223
+-- Name: book_desc_desc_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.book_desc_desc_id_seq OWNED BY public.book_desc.desc_id;
+
+
+--
+-- TOC entry 226 (class 1259 OID 33131)
+-- Name: client; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.client (
+    client_id bigint NOT NULL,
+    cname character varying(50) NOT NULL,
+    csurnam character varying(50) NOT NULL,
+    cmail character varying(50) NOT NULL,
+    cphone character varying(50) NOT NULL
+);
+
+
+ALTER TABLE public.client OWNER TO postgres;
+
+--
+-- TOC entry 225 (class 1259 OID 33130)
+-- Name: client_client_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.client_client_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.client_client_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 4972 (class 0 OID 0)
+-- Dependencies: 225
+-- Name: client_client_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.client_client_id_seq OWNED BY public.client.client_id;
+
+
+--
+-- TOC entry 216 (class 1259 OID 33070)
+-- Name: genre; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.genre (
+    genre_id bigint NOT NULL,
+    genre_name character varying(50) NOT NULL,
+    genre_description character varying(200) NOT NULL
+);
+
+
+ALTER TABLE public.genre OWNER TO postgres;
+
+--
+-- TOC entry 215 (class 1259 OID 33069)
+-- Name: genre_genre_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.genre_genre_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.genre_genre_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 4973 (class 0 OID 0)
+-- Dependencies: 215
+-- Name: genre_genre_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.genre_genre_id_seq OWNED BY public.genre.genre_id;
+
+
+--
+-- TOC entry 230 (class 1259 OID 33179)
+-- Name: lended; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.lended (
+    id_lend bigint NOT NULL,
+    stock_id integer,
+    client_id integer,
+    lend_date date,
+    return_date date
+);
+
+
+ALTER TABLE public.lended OWNER TO postgres;
+
+--
+-- TOC entry 229 (class 1259 OID 33178)
+-- Name: lended_id_lend_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.lended_id_lend_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.lended_id_lend_seq OWNER TO postgres;
+
+--
+-- TOC entry 4974 (class 0 OID 0)
+-- Dependencies: 229
+-- Name: lended_id_lend_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.lended_id_lend_seq OWNED BY public.lended.id_lend;
+
+
+--
+-- TOC entry 228 (class 1259 OID 33140)
+-- Name: library_stock; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.library_stock (
+    stock_id bigint NOT NULL,
+    book_id integer,
+    in_stock smallint NOT NULL,
+    possible_stock smallint NOT NULL
+);
+
+
+ALTER TABLE public.library_stock OWNER TO postgres;
+
+--
+-- TOC entry 227 (class 1259 OID 33139)
+-- Name: library_stock_stock_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.library_stock_stock_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.library_stock_stock_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 4975 (class 0 OID 0)
+-- Dependencies: 227
+-- Name: library_stock_stock_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.library_stock_stock_id_seq OWNED BY public.library_stock.stock_id;
+
+
+--
+-- TOC entry 220 (class 1259 OID 33088)
+-- Name: publisher; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.publisher (
+    pub_id bigint NOT NULL,
+    pname character varying(50) NOT NULL
+);
+
+
+ALTER TABLE public.publisher OWNER TO postgres;
+
+--
+-- TOC entry 219 (class 1259 OID 33087)
+-- Name: publisher_pub_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.publisher_pub_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.publisher_pub_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 4976 (class 0 OID 0)
+-- Dependencies: 219
+-- Name: publisher_pub_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.publisher_pub_id_seq OWNED BY public.publisher.pub_id;
+
+
+--
+-- TOC entry 231 (class 1259 OID 33255)
+-- Name: vw_book_info; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.vw_book_info AS
+ SELECT b.book_id,
+    b.title AS book_title,
+    a.aname AS author_name,
+    a.asurname AS author_surname,
+    bd.series,
+    bd.n_in_series,
+    bd.m_n_in_series,
+    bd.description AS book_description,
+    p.pname AS publisher_name,
+    g.genre_name
+   FROM ((((public.book b
+     JOIN public.author a ON ((b.author_id = a.author_id)))
+     JOIN public.book_desc bd ON ((b.book_id = bd.book_id)))
+     JOIN public.publisher p ON ((b.pub_id = p.pub_id)))
+     JOIN public.genre g ON ((b.genre_id = g.genre_id)));
+
+
+ALTER VIEW public.vw_book_info OWNER TO postgres;
+
+--
+-- TOC entry 232 (class 1259 OID 33370)
+-- Name: vw_books_by; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.vw_books_by AS
+ SELECT book_id,
+    book_title,
+    author_name,
+    author_surname,
+    series,
+    n_in_series,
+    m_n_in_series,
+    book_description,
+    publisher_name,
+    genre_name
+   FROM public.vw_book_info;
+
+
+ALTER VIEW public.vw_books_by OWNER TO postgres;
+
+--
+-- TOC entry 233 (class 1259 OID 33374)
+-- Name: vw_lenders; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.vw_lenders AS
+ SELECT b.book_id,
+    b.title AS book_title,
+    a.aname AS author_name,
+    a.asurname AS author_surname,
+    l.client_id,
+    c.cname AS client_name,
+    c.csurnam AS client_surname,
+    c.cmail AS client_mail,
+    c.cphone AS client_phone,
+    l.lend_date,
+    l.return_date
+   FROM ((((public.lended l
+     JOIN public.library_stock ls ON ((l.stock_id = ls.stock_id)))
+     JOIN public.book b ON ((ls.book_id = b.book_id)))
+     JOIN public.author a ON ((b.author_id = a.author_id)))
+     JOIN public.client c ON ((l.client_id = c.client_id)));
+
+
+ALTER VIEW public.vw_lenders OWNER TO postgres;
+
+--
+-- TOC entry 234 (class 1259 OID 33379)
+-- Name: vw_lenders_by; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.vw_lenders_by AS
+ SELECT book_id,
+    book_title,
+    author_name,
+    author_surname,
+    client_id,
+    client_name,
+    client_surname,
+    client_mail,
+    client_phone,
+    lend_date,
+    return_date
+   FROM public.vw_lenders;
+
+
+ALTER VIEW public.vw_lenders_by OWNER TO postgres;
+
+--
+-- TOC entry 4745 (class 2604 OID 33082)
+-- Name: author author_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.author ALTER COLUMN author_id SET DEFAULT nextval('public.author_author_id_seq'::regclass);
+
+
+--
+-- TOC entry 4747 (class 2604 OID 33100)
+-- Name: book book_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.book ALTER COLUMN book_id SET DEFAULT nextval('public.book_book_id_seq'::regclass);
+
+
+--
+-- TOC entry 4748 (class 2604 OID 33122)
+-- Name: book_desc desc_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.book_desc ALTER COLUMN desc_id SET DEFAULT nextval('public.book_desc_desc_id_seq'::regclass);
+
+
+--
+-- TOC entry 4749 (class 2604 OID 33134)
+-- Name: client client_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.client ALTER COLUMN client_id SET DEFAULT nextval('public.client_client_id_seq'::regclass);
+
+
+--
+-- TOC entry 4744 (class 2604 OID 33073)
+-- Name: genre genre_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.genre ALTER COLUMN genre_id SET DEFAULT nextval('public.genre_genre_id_seq'::regclass);
+
+
+--
+-- TOC entry 4751 (class 2604 OID 33182)
+-- Name: lended id_lend; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.lended ALTER COLUMN id_lend SET DEFAULT nextval('public.lended_id_lend_seq'::regclass);
+
+
+--
+-- TOC entry 4750 (class 2604 OID 33143)
+-- Name: library_stock stock_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.library_stock ALTER COLUMN stock_id SET DEFAULT nextval('public.library_stock_stock_id_seq'::regclass);
+
+
+--
+-- TOC entry 4746 (class 2604 OID 33091)
+-- Name: publisher pub_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.publisher ALTER COLUMN pub_id SET DEFAULT nextval('public.publisher_pub_id_seq'::regclass);
+
+
+--
+-- TOC entry 4951 (class 0 OID 33079)
+-- Dependencies: 218
+-- Data for Name: author; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.author (author_id, aname, asurname) FROM stdin;
+1	Brandon	Sanderson
+2	Ursula	Le Guin
+3	Steven	Erikson
+4	Patrick	Rothfuss
+5	Joe	Abercrombie
+6	Camilla	Lackberg
+7	Remigiusz	Mróz
+8	Frank	Herbert
+9	Sue	Black
+10	Sarah J.	Maas
+\.
+
+
+--
+-- TOC entry 4955 (class 0 OID 33097)
+-- Dependencies: 222
+-- Data for Name: book; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.book (book_id, title, author_id, genre_id, pub_id) FROM stdin;
+1	The Final Empire	1	1	1
+2	The Way of Kings	1	1	1
+3	Warbreaker	1	1	1
+4	A Wizard of Earthsea	2	1	2
+5	The Left Hand of Darkness	2	4	2
+6	The Dispossessed	2	4	2
+7	Gardens of the Moon	3	1	3
+8	Deadhouse Gates	3	1	3
+9	Memories of Ice	3	1	3
+10	The Name of the Wind	4	1	1
+11	The Wise Mans Fear	4	1	1
+12	The Slow Regard of Silent Things	4	1	1
+13	The Blade Itself	5	1	1
+14	Before They Are Hanged	5	1	1
+15	Last Argument of Kings	5	1	1
+16	The Ice Princess	6	3	4
+17	The Preacher	6	3	4
+18	The Stonecutter	6	3	4
+19	Kasacja	7	3	5
+20	Zaginięcie	7	3	5
+21	Rewizja	7	3	5
+22	Dune	8	4	3
+23	Dune Messiah	8	4	3
+24	Children of Dune	8	4	3
+25	All That Remains	9	6	6
+26	Written in Bone	9	6	6
+27	The Skeleton Cupboard	9	6	6
+28	Throne of Glass	10	5	7
+29	Crown of Midnight	10	5	7
+30	Heir of Fire	10	5	7
+31	Mistborn: The Final Empire	1	1	1
+32	Elantris	1	1	1
+33	Oathbringer	1	1	1
+34	The Tombs of Atuan	2	1	2
+35	Tehanu	2	1	2
+36	The Lathe of Heaven	2	4	2
+37	House of Chains	3	1	3
+38	Midnight Tides	3	1	3
+39	The Bonehunters	3	1	3
+40	The Slow Regard of Silent Things	4	1	1
+41	A Little Hatred	5	1	1
+42	The Trouble with Peace	5	1	1
+43	The Girl Who Lived Twice	6	3	4
+44	Wotum nieufności	7	3	5
+45	Listy zza grobu	7	3	5
+46	God Emperor of Dune	8	4	3
+47	Heretics of Dune	8	4	3
+48	Chapterhouse: Dune	8	4	3
+49	Queen of Shadows	10	5	7
+50	Empire of Storms	10	5	7
+51	Tower of Dawn	10	5	7
+\.
+
+
+--
+-- TOC entry 4957 (class 0 OID 33119)
+-- Dependencies: 224
+-- Data for Name: book_desc; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.book_desc (desc_id, book_id, series, n_in_series, m_n_in_series, description) FROM stdin;
+1	1	Mistborn	1	3	The Final Empire is the first book in Brandon Sandersons Mistborn trilogy. It tells the story of a world where ash falls from the sky and mist dominates the night, where the Skaa labor and die under the oppression of the immortal Lord Ruler.
+2	2	The Stormlight Archive	1	4	The Way of Kings is the first book in Brandon Sandersons epic fantasy series, The Stormlight Archive. It follows the story of Kaladin, a former slave who becomes a leader in a war against the Parshendi.
+3	3	Warbreaker	\N	\N	Warbreaker is a standalone novel by Brandon Sanderson set in a world where magic is derived from color and breath. It follows the story of two sisters, Vivenna and Siri, who are thrust into a war of politics and magic.
+4	4	Earthsea	1	6	A Wizard of Earthsea is the first book in Ursula K. Le Guins Earthsea series. It follows the story of Ged, a young boy with innate magical abilities who attends a school for wizards.
+5	5	Hainish Cycle	\N	\N	The Left Hand of Darkness is part of Ursula K. Le Guins Hainish Cycle. It explores themes of gender and sexuality on the planet Gethen, where inhabitants can change sex.
+6	6	Hainish Cycle	\N	\N	The Dispossessed is a utopian science fiction novel by Ursula K. Le Guin. It follows the life of Shevek, a physicist who travels between two planets to achieve his goal of creating a device that can allow instantaneous communication across space.
+7	7	Malazan Book of the Fallen	1	10	Gardens of the Moon is the first book in Steven Eriksons Malazan Book of the Fallen series. It introduces a complex world of magic, gods, and epic battles.
+8	8	Malazan Book of the Fallen	2	10	Deadhouse Gates is the second book in the Malazan Book of the Fallen series. It continues the story of the Malazan Empire as it faces rebellion and war.
+9	9	Malazan Book of the Fallen	3	10	Memories of Ice is the third book in Steven Eriksons Malazan Book of the Fallen series. It follows the aftermath of the Malazan Empires battle with the Pannion Domin.
+10	10	The Kingkiller Chronicle	1	3	The Name of the Wind is the first book in Patrick Rothfusss The Kingkiller Chronicle. It tells the story of Kvothe, a legendary figure known for his music, magic, and adventures.
+11	11	The Kingkiller Chronicle	2	3	The Wise Mans Fear is the second book in Patrick Rothfusss The Kingkiller Chronicle. It continues the story of Kvothe as he searches for answers and confronts dangers.
+12	12	The Kingkiller Chronicle	\N	\N	The Slow Regard of Silent Things is a companion novella to The Kingkiller Chronicle. It focuses on Auri, a mysterious character who lives beneath the University.
+13	13	The First Law	1	3	The Blade Itself is the first book in Joe Abercrombies The First Law trilogy. It follows the stories of several characters in a gritty, dark fantasy world.
+14	14	The First Law	2	3	Before They Are Hanged is the second book in The First Law trilogy. The characters continue their journeys through a world of war, politics, and betrayal.
+15	15	The First Law	3	3	Last Argument of Kings is the third book in Joe Abercrombies The First Law trilogy. It concludes the stories of the main characters with epic battles and shocking twists.
+16	16	Fjällbacka	1	10	The Ice Princess is the first book in Camilla Läckbergs Fjällbacka series. It follows writer Erica Falck and detective Patrik Hedström as they solve crimes in the small Swedish town of Fjällbacka.
+17	17	Fjällbacka	2	10	The Preacher is the second book in the Fjällbacka series. Erica and Patrik investigate a new murder that has connections to old crimes.
+18	18	Fjällbacka	3	10	The Stonecutter is the third book in Camilla Läckbergs Fjällbacka series. The discovery of a young girls body leads to a complex investigation with roots in the past.
+19	19	Joanna Chyłka	1	12	Kasacja is the first book in Remigiusz Mrózs Joanna Chyłka series. It follows lawyer Joanna Chyłka and her junior associate, Kordian Oryński, as they take on a challenging murder case.
+20	20	Joanna Chyłka	2	12	Zaginięcie is the second book in the Joanna Chyłka series. Joanna and Kordian tackle the case of a missing child that presents many challenges and twists.
+21	21	Joanna Chyłka	3	12	Rewizja is the third book in Remigiusz Mrózs Joanna Chyłka series. The legal thriller continues with new cases and personal challenges for the protagonists.
+22	22	Dune	1	6	Dune is the first book in Frank Herberts Dune series. It introduces the desert planet Arrakis, its valuable spice, and the struggle for control over it.
+23	23	Dune	2	6	Dune Messiah is the second book in the Dune series. It follows Paul Atreides as he deals with the consequences of his rise to power.
+24	24	Dune	3	6	Children of Dune is the third book in Frank Herberts Dune series. It focuses on the next generation of the Atreides family and their challenges.
+25	25	Sue Black	\N	\N	All That Remains is a memoir by forensic anthropologist Sue Black. It discusses her career and experiences with death and the human body.
+26	26	Sue Black	\N	\N	Written in Bone is another memoir by Sue Black. It explores cases and stories from her work as a forensic anthropologist.
+27	27	Sue Black	\N	\N	The Skeleton Cupboard is a collection of true stories from Sue Blacks career, detailing the science and humanity behind forensic anthropology.
+28	28	Throne of Glass	1	7	Throne of Glass is the first book in Sarah J. Maass series of the same name. It follows Celaena Sardothien, a young assassin, as she competes to become the kings champion.
+29	29	Throne of Glass	2	7	Crown of Midnight is the second book in the Throne of Glass series. Celaena navigates the court, secrets, and danger as the kings champion.
+30	30	Throne of Glass	3	7	Heir of Fire is the third book in Sarah J. Maass Throne of Glass series. Celaena travels to a new land to uncover her true destiny and face powerful enemies.
+31	31	Mistborn	1	3	Mistborn: The Final Empire is the first book in Brandon Sandersons Mistborn series. It sets the stage for a world where ash falls from the sky, and magic is wielded through metals.
+32	32	Mistborn	\N	\N	Elantris is a standalone novel by Brandon Sanderson. It tells the story of the magical city of Elantris and its fallen inhabitants.
+33	33	The Stormlight Archive	3	4	Oathbringer is the third book in Brandon Sandersons The Stormlight Archive. It continues the epic tale of Kaladin, Shallan, and Dalinar as they fight against the coming darkness.
+34	34	Earthsea	2	6	The Tombs of Atuan is the second book in Ursula K. Le Guins Earthsea series. It follows the story of Tenar, a priestess who meets the wizard Ged.
+35	35	Earthsea	4	6	Tehanu is the fourth book in the Earthsea series. It continues the story of Tenar and Ged as they navigate a world of magic and change.
+36	36	Hainish Cycle	\N	\N	The Lathe of Heaven is a standalone novel in Ursula K. Le Guins Hainish Cycle. It explores the power of dreams and the consequences of altering reality.
+37	37	Malazan Book of the Fallen	4	10	House of Chains is the fourth book in Steven Eriksons Malazan Book of the Fallen series. It continues the epic saga of the Malazan Empire and its enemies.
+38	38	Malazan Book of the Fallen	5	10	Midnight Tides is the fifth book in the Malazan Book of the Fallen series. It introduces new characters and storylines in the vast Malazan world.
+39	39	Malazan Book of the Fallen	6	10	The Bonehunters is the sixth book in Steven Eriksons Malazan Book of the Fallen series. It follows the Bonehunters as they face new threats and challenges.
+40	40	The Kingkiller Chronicle	\N	\N	The Slow Regard of Silent Things is a companion novella to The Kingkiller Chronicle. It focuses on Auri, a mysterious character who lives beneath the University.
+41	41	The First Law	1	3	A Little Hatred is the first book in Joe Abercrombies new trilogy set in the world of The First Law. It introduces new characters and continues the dark, gritty story.
+42	42	The First Law	2	3	The Trouble with Peace is the second book in Joe Abercrombies new trilogy. It continues the story of the characters introduced in A Little Hatred.
+43	43	Fjällbacka	\N	\N	The Girl Who Lived Twice is a standalone novel by Camilla Läckberg. It follows the story of a woman who discovers secrets about her past.
+44	44	Joanna Chyłka	4	12	Wotum nieufności is the fourth book in Remigiusz Mrózs Joanna Chyłka series. It continues the legal drama and challenges faced by Joanna and Kordian.
+45	45	Joanna Chyłka	5	12	Listy zza grobu is the fifth book in the Joanna Chyłka series. Joanna and Kordian tackle new legal cases and personal challenges.
+46	46	Dune	4	6	God Emperor of Dune is the fourth book in Frank Herberts Dune series. It explores the reign of Leto II, the God Emperor of Arrakis.
+47	47	Dune	5	6	Heretics of Dune is the fifth book in the Dune series. It follows the story of the Bene Gesserit and their plans for the future of humanity.
+48	48	Dune	6	6	Chapterhouse: Dune is the sixth book in Frank Herberts Dune series. It concludes the story of the Bene Gesserit and the future of the Dune universe.
+49	49	Throne of Glass	4	7	Queen of Shadows is the fourth book in Sarah J. Maass Throne of Glass series. Celaena returns to her kingdom to reclaim her throne and face new enemies.
+50	50	Throne of Glass	5	7	Empire of Storms is the fifth book in the Throne of Glass series. Celaena must rally her allies and prepare for the final battle.
+51	51	Throne of Glass	6	7	Tower of Dawn is the sixth book in Sarah J. Maass Throne of Glass series. It follows the journey of Chaol Westfall as he seeks healing and allies.
+\.
+
+
+--
+-- TOC entry 4959 (class 0 OID 33131)
+-- Dependencies: 226
+-- Data for Name: client; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.client (client_id, cname, csurnam, cmail, cphone) FROM stdin;
+1	Jakub	Kowalski	jakub.kowalski@example.com	+48 123 456 789
+2	Anna	Nowak	anna.nowak@example.com	+48 234 567 890
+3	Piotr	Wójcik	piotr.wojcik@example.com	+48 345 678 901
+4	Magdalena	Wiśniewska	magdalena.wisniewska@example.com	+48 456 789 012
+5	Tomasz	Kaminski	tomasz.kaminski@example.com	+48 567 890 123
+6	Katarzyna	Lewandowska	katarzyna.lewandowska@example.com	+48 678 901 234
+7	Michał	Zieliński	michal.zielinski@example.com	+48 789 012 345
+8	Agnieszka	Szymańska	agnieszka.szymanska@example.com	+48 890 123 456
+9	Marcin	Wojciechowski	marcin.wojciechowski@example.com	+48 901 234 567
+10	Barbara	Kwiatkowska	barbara.kwiatkowska@example.com	+48 012 345 678
+\.
+
+
+--
+-- TOC entry 4949 (class 0 OID 33070)
+-- Dependencies: 216
+-- Data for Name: genre; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.genre (genre_id, genre_name, genre_description) FROM stdin;
+1	Fantasy	A genre of speculative fiction set in a fictional universe, often inspired by real world myth and folklore.
+2	Thriller	A genre characterized by excitement, suspense, and high levels of anticipation, tension, and anxiety.
+3	Crime	A genre that fictionalizes crimes, their detection, criminals, and their motives.
+4	Sci-Fi	A genre of speculative fiction that typically deals with imaginative and futuristic concepts.
+5	Young Adult	A genre written for readers from 12 to 18 years of age.
+6	Fact	A genre of writing that is based on factual and real-world occurrences.
+\.
+
+
+--
+-- TOC entry 4963 (class 0 OID 33179)
+-- Dependencies: 230
+-- Data for Name: lended; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.lended (id_lend, stock_id, client_id, lend_date, return_date) FROM stdin;
+1	1	1	2023-01-01	\N
+2	2	2	2023-01-02	\N
+3	3	3	2023-01-03	\N
+4	4	4	2023-01-04	\N
+5	5	5	2023-01-05	\N
+6	6	6	2023-01-06	\N
+7	7	7	2023-01-07	\N
+8	8	8	2023-01-08	\N
+9	9	9	2023-01-09	\N
+10	10	10	2023-01-10	\N
+11	11	1	2023-01-11	\N
+12	12	2	2023-01-12	\N
+13	13	3	2023-01-13	\N
+14	14	4	2023-01-14	\N
+15	15	5	2023-01-15	\N
+16	16	6	2023-01-16	\N
+17	17	7	2023-01-17	\N
+18	18	8	2023-01-18	\N
+19	19	9	2023-01-19	\N
+20	20	10	2023-01-20	\N
+\.
+
+
+--
+-- TOC entry 4961 (class 0 OID 33140)
+-- Dependencies: 228
+-- Data for Name: library_stock; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.library_stock (stock_id, book_id, in_stock, possible_stock) FROM stdin;
+21	21	2	2
+22	22	3	3
+23	23	3	3
+24	24	2	2
+25	25	3	3
+26	26	2	2
+27	27	2	2
+28	28	2	2
+29	29	2	2
+30	30	2	2
+31	31	3	3
+32	32	2	2
+33	33	2	2
+34	34	2	2
+35	35	2	2
+36	36	2	2
+37	37	2	2
+38	38	5	5
+39	39	2	2
+40	40	2	2
+41	41	4	4
+42	42	2	2
+43	43	2	2
+44	44	1	1
+45	45	2	2
+46	46	2	2
+47	47	2	2
+48	48	4	4
+49	49	2	2
+50	50	3	3
+1	1	2	3
+2	2	2	3
+3	3	4	5
+4	4	3	4
+5	5	3	4
+6	6	1	2
+7	7	1	2
+8	8	2	3
+9	9	2	3
+10	10	1	2
+11	11	1	2
+12	12	2	3
+13	13	2	3
+14	14	1	2
+15	15	1	2
+16	16	1	2
+17	17	1	2
+18	18	1	2
+19	19	1	2
+20	20	1	2
+\.
+
+
+--
+-- TOC entry 4953 (class 0 OID 33088)
+-- Dependencies: 220
+-- Data for Name: publisher; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.publisher (pub_id, pname) FROM stdin;
+1	Mag
+2	Prószyński i S-ka
+3	Rebis
+4	Czarna Owca
+5	Czwarta Strona
+6	Znak
+7	Uroboros
+\.
+
+
+--
+-- TOC entry 4977 (class 0 OID 0)
+-- Dependencies: 217
+-- Name: author_author_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.author_author_id_seq', 1, false);
+
+
+--
+-- TOC entry 4978 (class 0 OID 0)
+-- Dependencies: 221
+-- Name: book_book_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.book_book_id_seq', 51, true);
+
+
+--
+-- TOC entry 4979 (class 0 OID 0)
+-- Dependencies: 223
+-- Name: book_desc_desc_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.book_desc_desc_id_seq', 51, true);
+
+
+--
+-- TOC entry 4980 (class 0 OID 0)
+-- Dependencies: 225
+-- Name: client_client_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.client_client_id_seq', 10, true);
+
+
+--
+-- TOC entry 4981 (class 0 OID 0)
+-- Dependencies: 215
+-- Name: genre_genre_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.genre_genre_id_seq', 6, true);
+
+
+--
+-- TOC entry 4982 (class 0 OID 0)
+-- Dependencies: 229
+-- Name: lended_id_lend_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.lended_id_lend_seq', 20, true);
+
+
+--
+-- TOC entry 4983 (class 0 OID 0)
+-- Dependencies: 227
+-- Name: library_stock_stock_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.library_stock_stock_id_seq', 50, true);
+
+
+--
+-- TOC entry 4984 (class 0 OID 0)
+-- Dependencies: 219
+-- Name: publisher_pub_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.publisher_pub_id_seq', 7, true);
+
+
+--
+-- TOC entry 4759 (class 2606 OID 33086)
+-- Name: author author_aname_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.author
+    ADD CONSTRAINT author_aname_key UNIQUE (aname);
+
+
+--
+-- TOC entry 4761 (class 2606 OID 33084)
+-- Name: author author_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.author
+    ADD CONSTRAINT author_pkey PRIMARY KEY (author_id);
+
+
+--
+-- TOC entry 4776 (class 2606 OID 33124)
+-- Name: book_desc book_desc_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.book_desc
+    ADD CONSTRAINT book_desc_pkey PRIMARY KEY (desc_id);
+
+
+--
+-- TOC entry 4772 (class 2606 OID 33102)
+-- Name: book book_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.book
+    ADD CONSTRAINT book_pkey PRIMARY KEY (book_id);
+
+
+--
+-- TOC entry 4779 (class 2606 OID 33138)
+-- Name: client client_cname_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.client
+    ADD CONSTRAINT client_cname_key UNIQUE (cname);
+
+
+--
+-- TOC entry 4781 (class 2606 OID 33136)
+-- Name: client client_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.client
+    ADD CONSTRAINT client_pkey PRIMARY KEY (client_id);
+
+
+--
+-- TOC entry 4753 (class 2606 OID 33077)
+-- Name: genre genre_genre_name_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.genre
+    ADD CONSTRAINT genre_genre_name_key UNIQUE (genre_name);
+
+
+--
+-- TOC entry 4755 (class 2606 OID 33075)
+-- Name: genre genre_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.genre
+    ADD CONSTRAINT genre_pkey PRIMARY KEY (genre_id);
+
+
+--
+-- TOC entry 4790 (class 2606 OID 33184)
+-- Name: lended lended_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.lended
+    ADD CONSTRAINT lended_pkey PRIMARY KEY (id_lend);
+
+
+--
+-- TOC entry 4788 (class 2606 OID 33145)
+-- Name: library_stock library_stock_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.library_stock
+    ADD CONSTRAINT library_stock_pkey PRIMARY KEY (stock_id);
+
+
+--
+-- TOC entry 4768 (class 2606 OID 33093)
+-- Name: publisher publisher_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.publisher
+    ADD CONSTRAINT publisher_pkey PRIMARY KEY (pub_id);
+
+
+--
+-- TOC entry 4770 (class 2606 OID 33095)
+-- Name: publisher publisher_pname_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.publisher
+    ADD CONSTRAINT publisher_pname_key UNIQUE (pname);
+
+
+--
+-- TOC entry 4762 (class 1259 OID 33217)
+-- Name: idx_author_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_author_id ON public.author USING btree (author_id);
+
+
+--
+-- TOC entry 4763 (class 1259 OID 33218)
+-- Name: idx_author_name; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_author_name ON public.author USING btree (aname);
+
+
+--
+-- TOC entry 4764 (class 1259 OID 33219)
+-- Name: idx_author_surname; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_author_surname ON public.author USING btree (asurname);
+
+
+--
+-- TOC entry 4773 (class 1259 OID 33221)
+-- Name: idx_book_author_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_book_author_id ON public.book USING btree (author_id);
+
+
+--
+-- TOC entry 4777 (class 1259 OID 33222)
+-- Name: idx_book_desc_book_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_book_desc_book_id ON public.book_desc USING btree (book_id);
+
+
+--
+-- TOC entry 4774 (class 1259 OID 33220)
+-- Name: idx_book_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_book_id ON public.book USING btree (book_id);
+
+
+--
+-- TOC entry 4782 (class 1259 OID 33227)
+-- Name: idx_client_client_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_client_client_id ON public.client USING btree (client_id);
+
+
+--
+-- TOC entry 4783 (class 1259 OID 33228)
+-- Name: idx_client_mail; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_client_mail ON public.client USING btree (cmail);
+
+
+--
+-- TOC entry 4784 (class 1259 OID 33229)
+-- Name: idx_client_phone; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_client_phone ON public.client USING btree (cphone);
+
+
+--
+-- TOC entry 4756 (class 1259 OID 33225)
+-- Name: idx_genre_genre_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_genre_genre_id ON public.genre USING btree (genre_id);
+
+
+--
+-- TOC entry 4757 (class 1259 OID 33226)
+-- Name: idx_genre_genre_name; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_genre_genre_name ON public.genre USING btree (genre_name);
+
+
+--
+-- TOC entry 4785 (class 1259 OID 33231)
+-- Name: idx_library_stock_book_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_library_stock_book_id ON public.library_stock USING btree (book_id);
+
+
+--
+-- TOC entry 4786 (class 1259 OID 33230)
+-- Name: idx_library_stock_stock_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_library_stock_stock_id ON public.library_stock USING btree (stock_id);
+
+
+--
+-- TOC entry 4765 (class 1259 OID 33224)
+-- Name: idx_publisher_pname; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_publisher_pname ON public.publisher USING btree (pname);
+
+
+--
+-- TOC entry 4766 (class 1259 OID 33223)
+-- Name: idx_publisher_pub_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_publisher_pub_id ON public.publisher USING btree (pub_id);
+
+
+--
+-- TOC entry 4798 (class 2620 OID 33303)
+-- Name: lended after_delete_lended; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER after_delete_lended AFTER DELETE ON public.lended FOR EACH ROW EXECUTE FUNCTION public.trigger_increment_stock();
+
+
+--
+-- TOC entry 4799 (class 2620 OID 33305)
+-- Name: lended before_insert_check_stock; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER before_insert_check_stock BEFORE INSERT ON public.lended FOR EACH ROW EXECUTE FUNCTION public.check_stock_before_lend();
+
+
+--
+-- TOC entry 4800 (class 2620 OID 33302)
+-- Name: lended before_insert_lended; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER before_insert_lended BEFORE INSERT ON public.lended FOR EACH ROW EXECUTE FUNCTION public.trigger_decrement_stock();
+
+
+--
+-- TOC entry 4791 (class 2606 OID 33103)
+-- Name: book book_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.book
+    ADD CONSTRAINT book_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.author(author_id);
+
+
+--
+-- TOC entry 4794 (class 2606 OID 33125)
+-- Name: book_desc book_desc_book_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.book_desc
+    ADD CONSTRAINT book_desc_book_id_fkey FOREIGN KEY (book_id) REFERENCES public.book(book_id);
+
+
+--
+-- TOC entry 4792 (class 2606 OID 33108)
+-- Name: book book_genre_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.book
+    ADD CONSTRAINT book_genre_id_fkey FOREIGN KEY (genre_id) REFERENCES public.genre(genre_id);
+
+
+--
+-- TOC entry 4793 (class 2606 OID 33113)
+-- Name: book book_pub_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.book
+    ADD CONSTRAINT book_pub_id_fkey FOREIGN KEY (pub_id) REFERENCES public.publisher(pub_id);
+
+
+--
+-- TOC entry 4796 (class 2606 OID 33190)
+-- Name: lended lended_client_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.lended
+    ADD CONSTRAINT lended_client_id_fkey FOREIGN KEY (client_id) REFERENCES public.client(client_id);
+
+
+--
+-- TOC entry 4797 (class 2606 OID 33185)
+-- Name: lended lended_stock_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.lended
+    ADD CONSTRAINT lended_stock_id_fkey FOREIGN KEY (stock_id) REFERENCES public.library_stock(stock_id);
+
+
+--
+-- TOC entry 4795 (class 2606 OID 33146)
+-- Name: library_stock library_stock_book_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.library_stock
+    ADD CONSTRAINT library_stock_book_id_fkey FOREIGN KEY (book_id) REFERENCES public.book(book_id);
+
+
+-- Completed on 2024-06-21 21:58:30
+
+--
+-- PostgreSQL database dump complete
+--
+
